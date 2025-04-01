@@ -1,6 +1,5 @@
 //! Error types
 
-use num_derive::FromPrimitive;
 use solana_program::{
     decode_error::DecodeError,
     msg,
@@ -9,7 +8,7 @@ use solana_program::{
 use thiserror::Error;
 
 /// Errors that may be returned by the StableSwap program.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Error, FromPrimitive)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Error)]
 pub enum SwapError {
     /// The account cannot be initialized because it is already being used.
     #[error("Swap account already in use")]
