@@ -146,16 +146,6 @@ impl StableSwap {
         numerator.checked_div(denominator)
     }
 
-    fn compute_next_d(
-        &self,
-        amp_factor: u64,
-        d_init: U256,
-        d_prod: U256,
-        sum_x: u64,
-    ) -> Option<U256> {
-        self.compute_next_d2(amp_factor, d_init, d_prod, sum_x.into())
-    }
-
     /// Compute the amplification coefficient (A).
     ///
     /// The amplification coefficient is used to determine the slippage incurred when
