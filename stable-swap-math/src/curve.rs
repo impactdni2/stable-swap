@@ -546,10 +546,10 @@ mod tests {
 
     #[test]
     fn test_ramp_amp_up() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let initial_amp_factor = 100;
         let target_amp_factor = initial_amp_factor * 2;
-        let start_ramp_ts = rng.gen_range(ZERO_TS..=i64::MAX - RAMP_TICKS);
+        let start_ramp_ts = rng.random_range(ZERO_TS..=i64::MAX - RAMP_TICKS);
         let stop_ramp_ts = start_ramp_ts + MIN_RAMP_DURATION;
         println!(
             "start_ramp_ts: {}, stop_ramp_ts: {}",
@@ -576,11 +576,11 @@ mod tests {
 
     #[test]
     fn test_ramp_amp_down() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let initial_amp_factor = 100;
         let target_amp_factor = initial_amp_factor / 10;
         let amp_range = initial_amp_factor - target_amp_factor;
-        let start_ramp_ts = rng.gen_range(ZERO_TS..=i64::MAX - RAMP_TICKS);
+        let start_ramp_ts = rng.random_range(ZERO_TS..=i64::MAX - RAMP_TICKS);
         let stop_ramp_ts = start_ramp_ts + MIN_RAMP_DURATION;
         println!(
             "start_ramp_ts: {}, stop_ramp_ts: {}",
@@ -744,14 +744,14 @@ mod tests {
     #[test]
     fn test_curve_math_with_random_inputs() {
         for _ in 0..100 {
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
 
-            let amp_factor: u64 = rng.gen_range(MIN_AMP..=MAX_AMP);
-            let amount_a: u64 = rng.gen_range(1..=MAX_TOKENS_IN);
-            let amount_b: u64 = rng.gen_range(1..=MAX_TOKENS_IN);
-            let start_ramp_ts: i64 = rng.gen_range(ZERO_TS..=i64::MAX);
-            let stop_ramp_ts: i64 = rng.gen_range(start_ramp_ts..=i64::MAX);
-            let current_ts: i64 = rng.gen_range(start_ramp_ts..=stop_ramp_ts);
+            let amp_factor: u64 = rng.random_range(MIN_AMP..=MAX_AMP);
+            let amount_a: u64 = rng.random_range(1..=MAX_TOKENS_IN);
+            let amount_b: u64 = rng.random_range(1..=MAX_TOKENS_IN);
+            let start_ramp_ts: i64 = rng.random_range(ZERO_TS..=i64::MAX);
+            let stop_ramp_ts: i64 = rng.random_range(start_ramp_ts..=i64::MAX);
+            let current_ts: i64 = rng.random_range(start_ramp_ts..=stop_ramp_ts);
             println!("testing curve_math_with_random_inputs:");
             println!(
                 "current_ts: {}, start_ramp_ts: {}, stop_ramp_ts: {}",
@@ -771,7 +771,7 @@ mod tests {
                 start_ramp_ts,
                 stop_ramp_ts,
             );
-            let amount_x: u64 = rng.gen_range(0..=amount_a);
+            let amount_x: u64 = rng.random_range(0..=amount_a);
 
             println!("amount_x: {}", amount_x);
             check_y(&model, amount_x, d, current_ts, start_ramp_ts, stop_ramp_ts);
@@ -857,16 +857,16 @@ mod tests {
     #[test]
     fn test_swap_calculation_with_random_inputs() {
         for _ in 0..100 {
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
 
-            let initial_amp_factor: u64 = rng.gen_range(MIN_AMP..=MAX_AMP);
-            let target_amp_factor: u64 = rng.gen_range(MIN_AMP..=MAX_AMP);
-            let start_ramp_ts: i64 = rng.gen_range(ZERO_TS..=i64::MAX);
-            let stop_ramp_ts: i64 = rng.gen_range(start_ramp_ts..=i64::MAX);
-            let current_ts: i64 = rng.gen_range(start_ramp_ts..=stop_ramp_ts);
-            let source_amount: u64 = rng.gen_range(1..=MAX_TOKENS_IN);
-            let swap_source_amount: u64 = rng.gen_range(1..=MAX_TOKENS_IN);
-            let swap_destination_amount: u64 = rng.gen_range(1..=MAX_TOKENS_IN);
+            let initial_amp_factor: u64 = rng.random_range(MIN_AMP..=MAX_AMP);
+            let target_amp_factor: u64 = rng.random_range(MIN_AMP..=MAX_AMP);
+            let start_ramp_ts: i64 = rng.random_range(ZERO_TS..=i64::MAX);
+            let stop_ramp_ts: i64 = rng.random_range(start_ramp_ts..=i64::MAX);
+            let current_ts: i64 = rng.random_range(start_ramp_ts..=stop_ramp_ts);
+            let source_amount: u64 = rng.random_range(1..=MAX_TOKENS_IN);
+            let swap_source_amount: u64 = rng.random_range(1..=MAX_TOKENS_IN);
+            let swap_destination_amount: u64 = rng.random_range(1..=MAX_TOKENS_IN);
             println!("testing swap_calculation_with_random_inputs:");
             println!(
                 "current_ts: {}, start_ramp_ts: {}, stop_ramp_ts: {}",
@@ -1143,17 +1143,17 @@ mod tests {
     #[test]
     fn test_compute_withdraw_one_with_random_inputs() {
         for _ in 0..100 {
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
 
-            let initial_amp_factor: u64 = rng.gen_range(MIN_AMP..=MAX_AMP);
-            let target_amp_factor: u64 = rng.gen_range(MIN_AMP..=MAX_AMP);
-            let start_ramp_ts: i64 = rng.gen_range(ZERO_TS..=i64::MAX);
-            let stop_ramp_ts: i64 = rng.gen_range(start_ramp_ts..=i64::MAX);
-            let current_ts: i64 = rng.gen_range(start_ramp_ts..=stop_ramp_ts);
-            let swap_base_amount: u64 = rng.gen_range(1..=MAX_TOKENS_IN);
-            let swap_quote_amount: u64 = rng.gen_range(1..=MAX_TOKENS_IN);
+            let initial_amp_factor: u64 = rng.random_range(MIN_AMP..=MAX_AMP);
+            let target_amp_factor: u64 = rng.random_range(MIN_AMP..=MAX_AMP);
+            let start_ramp_ts: i64 = rng.random_range(ZERO_TS..=i64::MAX);
+            let stop_ramp_ts: i64 = rng.random_range(start_ramp_ts..=i64::MAX);
+            let current_ts: i64 = rng.random_range(start_ramp_ts..=stop_ramp_ts);
+            let swap_base_amount: u64 = rng.random_range(1..=MAX_TOKENS_IN);
+            let swap_quote_amount: u64 = rng.random_range(1..=MAX_TOKENS_IN);
             let pool_token_supply = swap_base_amount + swap_quote_amount;
-            let pool_token_amount: u64 = rng.gen_range(1..=pool_token_supply);
+            let pool_token_amount: u64 = rng.random_range(1..=pool_token_supply);
             println!("testing compute_withdraw_one_with_random_inputs:");
             println!(
                 "current_ts: {}, start_ramp_ts: {}, stop_ramp_ts: {}",
