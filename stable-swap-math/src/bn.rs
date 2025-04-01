@@ -16,8 +16,7 @@ macro_rules! impl_borsh_serialize_for_bn {
         impl BorshSerialize for $type {
             #[inline]
             fn serialize<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
-                let bytes = self.to_le_bytes();
-                writer.write_all(&bytes)
+                writer.write_all(&self.to_little_endian())
             }
         }
     };
@@ -73,15 +72,6 @@ impl U256 {
         U256::from_little_endian(&bytes)
     }
 
-    /// Convert to little endian bytes
-    pub fn to_le_bytes(self) -> [u8; 32] {
-        let mut buf: Vec<u8> = Vec::with_capacity(size_of::<Self>());
-        self.to_little_endian(buf.borrow_mut());
-
-        let mut bytes: [u8; 32] = [0u8; 32];
-        bytes.copy_from_slice(buf.as_slice());
-        bytes
-    }
 }
 
 impl_borsh_deserialize_for_bn!(U256);
@@ -116,16 +106,6 @@ impl U192 {
     /// Convert from little endian bytes
     pub fn from_le_bytes(bytes: [u8; 24]) -> Self {
         U192::from_little_endian(&bytes)
-    }
-
-    /// Convert to little endian bytes
-    pub fn to_le_bytes(self) -> [u8; 24] {
-        let mut buf: Vec<u8> = Vec::with_capacity(size_of::<Self>());
-        self.to_little_endian(buf.borrow_mut());
-
-        let mut bytes: [u8; 24] = [0u8; 24];
-        bytes.copy_from_slice(buf.as_slice());
-        bytes
     }
 }
 

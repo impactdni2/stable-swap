@@ -1,6 +1,8 @@
 //! Utilities for getting the virtual price of a pool.
 
-use crate::{bn::U192, curve::StableSwap};
+use primitive_types::U256;
+
+use crate::curve::StableSwap;
 
 /// Utilities for calculating the virtual price of a Saber LP token.
 ///
@@ -80,10 +82,10 @@ impl SaberSwap {
     ///
     /// - `virtual_amount` - The number of "virtual" underlying tokens.
     pub fn calculate_pool_tokens_from_virtual_amount(&self, virtual_amount: u64) -> Option<u64> {
-        U192::from(virtual_amount)
+        Some(U256::from(virtual_amount)
             .checked_mul(self.lp_mint_supply.into())?
             .checked_div(self.compute_d()?)?
-            .to_u64()
+            .as_u64())
     }
 
     /// Calculates the virtual price of the given amount of pool tokens.
@@ -98,14 +100,14 @@ impl SaberSwap {
     ///
     /// [^chainlink]: Source: <https://blog.chain.link/using-chainlink-oracles-to-securely-utilize-curve-lp-pools/>
     pub fn calculate_virtual_price_of_pool_tokens(&self, pool_token_amount: u64) -> Option<u64> {
-        self.compute_d()?
+        Some(self.compute_d()?
             .checked_mul(pool_token_amount.into())?
             .checked_div(self.lp_mint_supply.into())?
-            .to_u64()
+            .as_u64())
     }
 
     /// Computes D, which is the virtual price times the total supply of the pool.
-    pub fn compute_d(&self) -> Option<U192> {
+    pub fn compute_d(&self) -> Option<U256> {
         let calculator = StableSwap::from(self);
         calculator.compute_d(self.token_a_reserve, self.token_b_reserve)
     }

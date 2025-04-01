@@ -5,7 +5,7 @@
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::integer_arithmetic)]
 
-pub mod bn;
+// pub mod bn;
 pub mod curve;
 pub mod math;
 pub mod pool_converter;

@@ -1,12 +1,13 @@
 //! Swap calculations and curve invariant implementation
 
-use crate::{bn::U192, math::FeeCalculator};
+use crate::math::FeeCalculator;
 use num_traits::ToPrimitive;
 use stable_swap_client::{
     fees::Fees,
     solana_program::{clock::Clock, program_error::ProgramError, sysvar::Sysvar},
     state::SwapInfo,
 };
+use primitive_types::U256;
 
 /// Number of coins in a swap.
 /// The Saber StableSwap only supports 2 tokens.
@@ -127,10 +128,10 @@ impl StableSwap {
     fn compute_next_d2(
         &self,
         amp_factor: u64,
-        d_init: U192,
-        d_prod: U192,
+        d_init: U256,
+        d_prod: U256,
         sum_x: u128,
-    ) -> Option<U192> {
+    ) -> Option<U256> {
         let ann = amp_factor.checked_mul(N_COINS.into())?;
         let leverage = sum_x.checked_mul(ann.into())?;
         // d = (ann * sum_x + d_prod * n_coins) * d / ((ann - 1) * d + (n_coins + 1) * d_prod)
@@ -148,10 +149,10 @@ impl StableSwap {
     fn compute_next_d(
         &self,
         amp_factor: u64,
-        d_init: U192,
-        d_prod: U192,
+        d_init: U256,
+        d_prod: U256,
         sum_x: u64,
-    ) -> Option<U192> {
+    ) -> Option<U256> {
         self.compute_next_d2(amp_factor, d_init, d_prod, sum_x.into())
     }
 
@@ -198,7 +199,7 @@ impl StableSwap {
     }
 
     /// Original compute_d, but with u128 type as parameters
-    pub fn compute_d2(&self, amount_a: u128, amount_b: u128) -> Option<U192> {
+    pub fn compute_d2(&self, amount_a: u128, amount_b: u128) -> Option<U256> {
         let sum_x = amount_a.checked_add(amount_b)?; // sum(x_i), a.k.a S
         if sum_x == 0 {
             Some(0.into())
@@ -208,8 +209,8 @@ impl StableSwap {
             let amount_b_times_coins = amount_b.checked_mul(N_COINS.into())?;
 
             // Newton's method to approximate D
-            let mut d_prev: U192;
-            let mut d: U192 = sum_x.into();
+            let mut d_prev: U256;
+            let mut d: U256 = sum_x.into();
             for _ in 0..256 {
                 let mut d_prod = d;
                 d_prod = d_prod
@@ -248,7 +249,7 @@ impl StableSwap {
     /// - `amount_b` - The amount of token B owned by the LP pool. (i.e. token B reserves)
     ///
     /// *For more info on reserves, see [stable_swap_client::state::SwapTokenInfo::reserves].*
-    pub fn compute_d(&self, amount_a: u64, amount_b: u64) -> Option<U192> {
+    pub fn compute_d(&self, amount_a: u64, amount_b: u64) -> Option<U256> {
         self.compute_d2(amount_a as u128, amount_b as u128)
     }
 
@@ -279,7 +280,7 @@ impl StableSwap {
                 let ideal_balance = d_1
                     .checked_mul(old_balances[i].into())?
                     .checked_div(d_0)?
-                    .to_u128()?;
+                    .as_u128();
                 let difference = if ideal_balance > new_balances[i] {
                     ideal_balance.checked_sub(new_balances[i])?
                 } else {
@@ -290,10 +291,10 @@ impl StableSwap {
             }
 
             let d_2 = self.compute_d2(new_balances[0], new_balances[1])?;
-            U192::from(pool_token_supply)
+            Some(U256::from(pool_token_supply)
                 .checked_mul(d_2.checked_sub(d_0)?)?
                 .checked_div(d_0)?
-                .to_u64()
+                .as_u64())
         }
     }
 
@@ -318,7 +319,7 @@ impl StableSwap {
     }
 
     /// Same as compute_y_raw, but with u128 as parameters type
-    pub fn compute_y_raw2(&self, x: u128, d: U192) -> Option<U192> {
+    pub fn compute_y_raw2(&self, x: u128, d: U256) -> Option<U256> {
         let amp_factor = self.compute_amp_factor()?;
         let ann = amp_factor.checked_mul(N_COINS.into())?; // A * n ** n
 
@@ -334,7 +335,7 @@ impl StableSwap {
         let b = d.checked_div(ann.into())?.checked_add(x.into())?; // d is subtracted on line 147
 
         // Solve for y by approximating: y**2 + b*y = c
-        let mut y_prev: U192;
+        let mut y_prev: U256;
         let mut y = d;
         for _ in 0..256 {
             y_prev = y;
@@ -362,18 +363,18 @@ impl StableSwap {
     /// y**2 + b*y = c
     /// ```
     #[allow(clippy::many_single_char_names)]
-    pub fn compute_y_raw(&self, x: u64, d: U192) -> Option<U192> {
+    pub fn compute_y_raw(&self, x: u64, d: U256) -> Option<U256> {
         self.compute_y_raw2(x.into(), d)
     }
 
     /// Same as compute_y, but with u128 parameters type
-    pub fn compute_y2(&self, x: u128, d: U192) -> Option<u128> {
-        self.compute_y_raw2(x, d)?.to_u128()
+    pub fn compute_y2(&self, x: u128, d: U256) -> Option<u128> {
+        Some(self.compute_y_raw2(x, d)?.as_u128())
     }
 
     /// Computes the swap amount `y` in proportion to `x`.
-    pub fn compute_y(&self, x: u64, d: U192) -> Option<u64> {
-        self.compute_y_raw(x, d)?.to_u64()
+    pub fn compute_y(&self, x: u64, d: U256) -> Option<u64> {
+        Some(self.compute_y_raw(x, d)?.as_u64())
     }
     /// Same as compute_withdraw_one, but with u128 parameters type
     pub fn compute_withdraw_one2(
@@ -386,24 +387,24 @@ impl StableSwap {
     ) -> Option<(u128, u128)> {
         let d_0 = self.compute_d2(swap_base_amount, swap_quote_amount)?;
         let d_1 = d_0.checked_sub(
-            U192::from(pool_token_amount)
+            U256::from(pool_token_amount)
                 .checked_mul(d_0)?
                 .checked_div(pool_token_supply.into())?,
         )?;
         let new_y = self.compute_y2(swap_quote_amount, d_1)?;
 
         // expected_base_amount = swap_base_amount * d_1 / d_0 - new_y;
-        let expected_base_amount = U192::from(swap_base_amount)
+        let expected_base_amount = U256::from(swap_base_amount)
             .checked_mul(d_1)?
             .checked_div(d_0)?
-            .to_u128()?
+            .as_u128()
             .checked_sub(new_y)?;
         // expected_quote_amount = swap_quote_amount - swap_quote_amount * d_1 / d_0;
         let expected_quote_amount = swap_quote_amount.checked_sub(
-            U192::from(swap_quote_amount)
+            U256::from(swap_quote_amount)
                 .checked_mul(d_1)?
                 .checked_div(d_0)?
-                .to_u128()?,
+                .as_u128(),
         )?;
         // new_base_amount = swap_base_amount - expected_base_amount * fee / fee_denominator;
         let new_base_amount = swap_base_amount
@@ -612,7 +613,7 @@ mod tests {
         current_ts: i64,
         start_ramp_ts: i64,
         stop_ramp_ts: i64,
-    ) -> U192 {
+    ) -> U256 {
         let swap = StableSwap {
             initial_amp_factor: model.amp_factor,
             target_amp_factor: model.amp_factor,
@@ -628,7 +629,7 @@ mod tests {
     fn check_y(
         model: &Model,
         x: u64,
-        d: U192,
+        d: U256,
         current_ts: i64,
         start_ramp_ts: i64,
         stop_ramp_ts: i64,
@@ -641,7 +642,7 @@ mod tests {
             stop_ramp_ts,
         };
         assert_eq!(
-            swap.compute_y_raw(x, d).unwrap().to_u128().unwrap(),
+            swap.compute_y_raw(x, d).unwrap().as_u128(),
             model.sim_y(0, 1, x)
         )
     }
@@ -1310,7 +1311,7 @@ mod tests {
             let invariant = StableSwap::new(amp_factor, amp_factor, current_ts, start_ramp_ts, stop_ramp_ts);
             let d0 = invariant.compute_d(base_token_amount, quote_token_amount).unwrap();
 
-            prop_assume!(U192::from(pool_token_amount) * U192::from(base_token_amount) / U192::from(pool_token_supply) >= U192::from(1));
+            prop_assume!(U256::from(pool_token_amount) * U256::from(base_token_amount) / U256::from(pool_token_supply) >= U256::from(1));
             let (withdraw_amount, _) = invariant.compute_withdraw_one(pool_token_amount, pool_token_supply, base_token_amount, quote_token_amount, &MODEL_FEES).unwrap();
 
             let new_base_token_amount = base_token_amount - withdraw_amount;
